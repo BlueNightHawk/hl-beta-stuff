@@ -700,7 +700,6 @@ bool CBasePlayerWeapon::UpdateClientData(CBasePlayer* pPlayer)
 	return true;
 }
 
-
 void CBasePlayerWeapon::SendWeaponAnim(int iAnim, int body)
 {
 	const bool skiplocal = !m_ForceSendAnimations && UseDecrement() != false;
@@ -715,6 +714,18 @@ void CBasePlayerWeapon::SendWeaponAnim(int iAnim, int body)
 	MESSAGE_BEGIN(MSG_ONE, SVC_WEAPONANIM, NULL, m_pPlayer->pev);
 	WRITE_BYTE(iAnim);	   // sequence number
 	WRITE_BYTE(pev->body); // weaponmodel bodygroup.
+	MESSAGE_END();
+}
+
+void CBasePlayerWeapon::SetBody(int body)
+{
+	if (body < 0)
+		body = pev->body;
+	else
+		pev->body = body;
+
+	MESSAGE_BEGIN(MSG_ONE, gmsgSetBody, NULL, m_pPlayer->pev);
+	WRITE_SHORT(body); // weaponmodel bodygroup.
 	MESSAGE_END();
 }
 
@@ -1441,3 +1452,10 @@ TYPEDESCRIPTION CSatchel::m_SaveData[] =
 		DEFINE_FIELD(CSatchel, m_chargeReady, FIELD_INTEGER),
 };
 IMPLEMENT_SAVERESTORE(CSatchel, CBasePlayerWeapon);
+
+TYPEDESCRIPTION CGlock::m_SaveData[] =
+	{
+		DEFINE_FIELD(CGlock, m_bSilencer, FIELD_BOOLEAN),
+		DEFINE_FIELD(CGlock, m_iSilencerState, FIELD_INTEGER),
+};
+IMPLEMENT_SAVERESTORE(CGlock, CBasePlayerWeapon);

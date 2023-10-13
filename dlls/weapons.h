@@ -315,6 +315,7 @@ public:
 	virtual void ResetEmptySound();
 
 	virtual void SendWeaponAnim(int iAnim, int body = 0);
+	virtual void SetBody(int body = -1);
 
 	bool CanDeploy() override;
 	virtual bool IsUseable();
@@ -492,9 +493,17 @@ enum glock_e
 class CGlock : public CBasePlayerWeapon
 {
 public:
+#ifndef CLIENT_DLL
+	bool Save(CSave& save) override;
+	bool Restore(CRestore& restore) override;
+	static TYPEDESCRIPTION m_SaveData[];
+#endif
+
 	void Spawn() override;
+	void EXPORT DefaultTouch(CBaseEntity* pOther);
 	void Precache() override;
 	int iItemSlot() override { return 2; }
+	void AddToPlayer(CBasePlayer* pPlayer) override;
 	bool GetItemInfo(ItemInfo* p) override;
 
 	void PrimaryAttack() override;
@@ -503,6 +512,7 @@ public:
 	bool Deploy() override;
 	void Reload() override;
 	void WeaponIdle() override;
+	void Holster() override;
 
 	bool UseDecrement() override
 	{
@@ -513,9 +523,14 @@ public:
 #endif
 	}
 
+	void ItemPostFrame() override;
+
+public:
+	bool m_bSilencer = false;
+	int m_iSilencerState = 0;
+
 private:
 	int m_iShell;
-
 
 	unsigned short m_usFireGlock1;
 	unsigned short m_usFireGlock2;

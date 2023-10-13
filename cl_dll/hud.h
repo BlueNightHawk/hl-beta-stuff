@@ -133,6 +133,15 @@ private:
 	WEAPON* m_pWeapon;
 	int m_HUD_bucket0;
 	int m_HUD_selection;
+
+public:
+	int GetCurrentWeaponId()
+	{
+		if (m_pWeapon)
+			return m_pWeapon->iId;
+
+		return -1;
+	}
 };
 
 //
@@ -592,6 +601,8 @@ public:
 	bool MsgFunc_Concuss(const char* pszName, int iSize, void* pbuf);
 	bool MsgFunc_Weapons(const char* pszName, int iSize, void* pbuf);
 
+	bool MsgFunc_SetBody(const char* pszName, int iSize, void* pbuf);
+
 	// Screen information
 	SCREENINFO m_scrinfo;
 
@@ -606,6 +617,11 @@ public:
 	void AddHudElem(CHudBase* p);
 
 	float GetSensitivity();
+
+	int GetCurrentWeaponId()
+	{
+		return m_Ammo.GetCurrentWeaponId();
+	}
 };
 
 extern CHud gHUD;

@@ -20,27 +20,70 @@
 #include "weapons.h"
 #include "player.h"
 
+#include "UserMessages.h"
+
 LINK_ENTITY_TO_CLASS(weapon_glock, CGlock);
 LINK_ENTITY_TO_CLASS(weapon_9mmhandgun, CGlock);
+LINK_ENTITY_TO_CLASS_SPECIAL(weapon_silencer, CGlock, CGlock_SpawnSilenced);
+
+void CGlock_SpawnSilenced(entvars_s* pev)
+{
+	pev->body = 1; 
+}
 
 void CGlock::Spawn()
 {
 	pev->classname = MAKE_STRING("weapon_9mmhandgun"); // hack to allow for old names
 	Precache();
 	m_iId = WEAPON_GLOCK;
-	SET_MODEL(ENT(pev), "models/w_9mmhandgun.mdl");
+
+	if (pev->body != 0)
+		SET_MODEL(ENT(pev), "models/w_silencer.mdl");
+	else
+		SET_MODEL(ENT(pev), "models/w_9mmhandgun.mdl");
 
 	m_iDefaultAmmo = GLOCK_DEFAULT_GIVE;
 
 	FallInit(); // get ready to fall down.
+
+	if (pev->body != 0)
+		SetTouch(&CGlock::DefaultTouch);
 }
 
+void CGlock::DefaultTouch(CBaseEntity* pOther)
+{
+	if (!pOther->IsPlayer())
+		return;
+
+	auto pPlayer = reinterpret_cast<CBasePlayer*>(pOther);
+
+	if (!pPlayer->HasWeaponBit(WEAPON_GLOCK_SILENCER) && pev->body != 0)
+	{
+		SET_MODEL(ENT(pev), "models/w_9mmhandgun.mdl");
+		pPlayer->SetWeaponBit(WEAPON_GLOCK_SILENCER);
+		m_bSilencer = true;
+	
+#ifndef CLIENT_DLL
+		if (pPlayer->HasWeaponBit(WEAPON_GLOCK))
+		{
+			MESSAGE_BEGIN(MSG_ONE, gmsgWeapPickup, NULL, pOther->pev);
+			WRITE_BYTE(WEAPON_GLOCK);
+			MESSAGE_END();
+		}
+#endif
+		EMIT_SOUND(ENT(pPlayer->pev), CHAN_ITEM, "items/gunpickup2.wav", 1, ATTN_NORM);
+	}
+
+	CBasePlayerWeapon::DefaultTouch(pOther);
+}
 
 void CGlock::Precache()
 {
 	PRECACHE_MODEL("models/v_9mmhandgun.mdl");
 	PRECACHE_MODEL("models/w_9mmhandgun.mdl");
 	PRECACHE_MODEL("models/p_9mmhandgun.mdl");
+
+	PRECACHE_MODEL("models/w_silencer.mdl");
 
 	m_iShell = PRECACHE_MODEL("models/shell.mdl"); // brass shell
 
@@ -72,15 +115,40 @@ bool CGlock::GetItemInfo(ItemInfo* p)
 	return true;
 }
 
+void CGlock::AddToPlayer(CBasePlayer* pPlayer)
+{
+	CBasePlayerWeapon::AddToPlayer(pPlayer);
+}
+
 bool CGlock::Deploy()
 {
-	// pev->body = 1;
-	return DefaultDeploy("models/v_9mmhandgun.mdl", "models/p_9mmhandgun.mdl", GLOCK_DRAW, "onehanded");
+	pev->body = m_bSilencer ? 1 : 0;
+	return DefaultDeploy("models/v_9mmhandgun.mdl", "models/p_9mmhandgun.mdl", GLOCK_DRAW, "onehanded", pev->body);
 }
 
 void CGlock::SecondaryAttack()
 {
-	GlockFire(0.1, 0.2, false);
+//	GlockFire(0.1, 0.2, false);
+
+	if (!m_pPlayer->HasWeaponBit(WEAPON_GLOCK_SILENCER))
+		return;
+
+	if (m_bSilencer)
+	{
+		SendWeaponAnim(GLOCK_HOLSTER);
+		m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 1.0f;
+		m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 2.0f;
+	}
+	else
+	{
+		SendWeaponAnim(GLOCK_ADD_SILENCER);
+		m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.8f;
+		m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 3.3f;
+	}
+
+	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 4.0f;
+
+	m_iSilencerState = 1;
 }
 
 void CGlock::PrimaryAttack()
@@ -175,6 +243,47 @@ void CGlock::Reload()
 }
 
 
+void CGlock::ItemPostFrame()
+{
+	if (m_iSilencerState != 0)
+	{
+		if (!m_bSilencer)
+		{
+			if (m_iSilencerState == 1)
+			{
+				m_iSilencerState = 2;
+				SetBody(1);
+				m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 2.1f;
+			}
+			else if (m_iSilencerState == 2)
+			{
+				m_iSilencerState = 0;
+				m_bSilencer = true;
+			}
+		}
+		else
+		{
+			if (m_iSilencerState != 0)
+			{
+				m_iSilencerState = 0;
+				m_bSilencer = false;
+				SendWeaponAnim(GLOCK_DRAW);
+				SetBody(0);
+				m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.3f;
+			}
+		}
+	}
+	
+	CBasePlayerWeapon::ItemPostFrame();
+}
+
+void CGlock::Holster()
+{
+	m_fInReload = false; // cancel any reload in progress.
+
+	m_iSilencerState = 0;
+}
+
 
 void CGlock::WeaponIdle()
 {
@@ -185,6 +294,10 @@ void CGlock::WeaponIdle()
 	if (m_flTimeWeaponIdle > UTIL_WeaponTimeBase())
 		return;
 
+//	Prevent client side jankiness
+#ifdef CLIENT_DLL
+	SetBody(m_bSilencer ? 1 : 0);
+#endif
 	// only idle if the slid isn't back
 	if (m_iClip != 0)
 	{

@@ -86,6 +86,9 @@ cvar_t* cl_rollangle = nullptr;
 cvar_t* cl_rollspeed = nullptr;
 cvar_t* cl_bobtilt = nullptr;
 
+cvar_t* sys_timescale;
+cvar_t* r_shadows;
+
 void ShutdownInput();
 
 //DECLARE_MESSAGE(m_Logo, Logo)
@@ -279,6 +282,12 @@ int __MsgFunc_AllowSpec(const char* pszName, int iSize, void* pbuf)
 	return 0;
 }
 
+int __MsgFunc_SetBody(const char* pszName, int iSize, void* pbuf)
+{
+	return gHUD.MsgFunc_SetBody(pszName, iSize, pbuf);
+}
+
+
 // This is called every time the DLL is loaded
 void CHud::Init()
 {
@@ -318,6 +327,8 @@ void CHud::Init()
 	// VGUI Menus
 	HOOK_MESSAGE(VGUIMenu);
 
+	HOOK_MESSAGE(SetBody);
+
 	CVAR_CREATE("hud_classautokill", "1", FCVAR_ARCHIVE | FCVAR_USERINFO); // controls whether or not to suicide immediately on TF class switch
 	CVAR_CREATE("hud_takesshots", "0", FCVAR_ARCHIVE);					   // controls whether or not to automatically take screenshots at the end of a round
 
@@ -334,6 +345,14 @@ void CHud::Init()
 	cl_rollangle = CVAR_CREATE("cl_rollangle", "2.0", FCVAR_ARCHIVE);
 	cl_rollspeed = CVAR_CREATE("cl_rollspeed", "200", FCVAR_ARCHIVE);
 	cl_bobtilt = CVAR_CREATE("cl_bobtilt", "0", FCVAR_ARCHIVE);
+
+	sys_timescale = (cvar_t*)((char*)gEngfuncs.pfnGetCvarPointer("fps_max") - 36);
+
+	r_shadows = (cvar_t*)((char*)gEngfuncs.pfnGetCvarPointer("r_mirroralpha") - 36);
+	r_shadows->flags |= FCVAR_ARCHIVE;
+
+	Cvar_Register(sys_timescale);
+	Cvar_Register(r_shadows);
 
 	m_pSpriteList = NULL;
 

@@ -88,6 +88,16 @@ typedef int EOFFSET;
 	extern "C" DLLEXPORT void mapClassName(entvars_t* pev); \
 	void mapClassName(entvars_t* pev) { GetClassPtr((DLLClassName*)pev); }
 
+// Calls additional func when creating entity
+#define LINK_ENTITY_TO_CLASS_SPECIAL(mapClassName, DLLClassName, ExtraFunc)    \
+	void ExtraFunc(entvars_t* pev);\
+	extern "C" DLLEXPORT void mapClassName(entvars_t* pev); \
+	void mapClassName(entvars_t* pev)                               \
+	{                                                               \
+		GetClassPtr((DLLClassName*)pev);                            \
+		ExtraFunc(pev);                                                 \
+	}
+
 /**
 *	@brief Gets the list of entities.
 *	Will return @c nullptr if there is no map loaded.

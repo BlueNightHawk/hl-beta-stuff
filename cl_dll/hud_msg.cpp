@@ -149,3 +149,17 @@ bool CHud::MsgFunc_Weapons(const char* pszName, int iSize, void* pbuf)
 
 	return true;
 }
+
+bool CHud::MsgFunc_SetBody(const char* pszName, int iSize, void* pbuf)
+{
+	BEGIN_READ(pbuf, iSize);
+
+	int body = READ_SHORT();
+
+	auto view = gEngfuncs.GetViewModel();
+
+	view->curstate.body = body;
+
+	return true;
+}
+

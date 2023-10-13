@@ -92,6 +92,9 @@ void WeaponsResource::LoadWeaponSprites(WEAPON* pWeapon)
 	pWeapon->hAmmo = 0;
 	pWeapon->hAmmo2 = 0;
 
+	pWeapon->hInactive_sil = 0;
+	pWeapon->hActive_sil = 0;
+
 	sprintf(sz, "sprites/%s.txt", pWeapon->szName);
 	client_sprite_t* pList = SPR_GetList(sz, &i);
 
@@ -191,6 +194,28 @@ void WeaponsResource::LoadWeaponSprites(WEAPON* pWeapon)
 	}
 	else
 		pWeapon->hAmmo2 = 0;
+
+	p = GetSpriteList(pList, "weapon_sil", iRes, i);
+	if (p)
+	{
+		sprintf(sz, "sprites/%s.spr", p->szSprite);
+		pWeapon->hInactive_sil = SPR_Load(sz);
+		pWeapon->rcInactive_sil = p->rc;
+
+		gHR.iHistoryGap = V_max(gHR.iHistoryGap, pWeapon->rcActive.bottom - pWeapon->rcActive.top);
+	}
+	else
+		pWeapon->hInactive_sil = 0;
+
+	p = GetSpriteList(pList, "weapon_sil_s", iRes, i);
+	if (p)
+	{
+		sprintf(sz, "sprites/%s.spr", p->szSprite);
+		pWeapon->hActive_sil = SPR_Load(sz);
+		pWeapon->rcActive_sil = p->rc;
+	}
+	else
+		pWeapon->hActive_sil = 0;
 }
 
 // Returns the first weapon for a given slot.
@@ -1097,8 +1122,16 @@ bool CHudAmmo::DrawWList(float flTime)
 
 				if (gpActiveSel == p)
 				{
-					SPR_Set(p->hActive, r, g, b);
-					SPR_DrawAdditive(0, x, y, &p->rcActive);
+					if (p->iId == WEAPON_GLOCK && gHUD.HasWeapon(WEAPON_GLOCK_SILENCER))
+					{
+						SPR_Set(p->hActive_sil, r, g, b);
+						SPR_DrawAdditive(0, x, y, &p->rcActive_sil);
+					}
+					else
+					{
+						SPR_Set(p->hActive, r, g, b);
+						SPR_DrawAdditive(0, x, y, &p->rcActive);
+					}
 
 					SPR_Set(gHUD.GetSprite(m_HUD_selection), r, g, b);
 					SPR_DrawAdditive(0, x, y, &gHUD.GetSpriteRect(m_HUD_selection));
@@ -1115,8 +1148,16 @@ bool CHudAmmo::DrawWList(float flTime)
 						ScaleColors(r, g, b, 128);
 					}
 
-					SPR_Set(p->hInactive, r, g, b);
-					SPR_DrawAdditive(0, x, y, &p->rcInactive);
+					if (p->iId == WEAPON_GLOCK && gHUD.HasWeapon(WEAPON_GLOCK_SILENCER))
+					{
+						SPR_Set(p->hInactive_sil, r, g, b);
+						SPR_DrawAdditive(0, x, y, &p->rcInactive_sil);
+					}
+					else
+					{
+						SPR_Set(p->hInactive, r, g, b);
+						SPR_DrawAdditive(0, x, y, &p->rcInactive);
+					}
 				}
 
 				// Draw Ammo Bar

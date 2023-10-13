@@ -327,6 +327,11 @@ void DLLEXPORT HUD_StudioEvent(const struct mstudioevent_s* event, const struct 
 
 	bool iMuzzleFlash = true;
 
+	if (entity == gEngfuncs.GetViewModel() && gHUD.GetCurrentWeaponId() == WEAPON_GLOCK && entity->curstate.body != 0)
+	{
+		iMuzzleFlash = false;
+	}
+
 
 	switch (event->event)
 	{
