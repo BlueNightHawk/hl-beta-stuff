@@ -549,6 +549,7 @@ private:
 	Rect* m_rgrcRects;							  /*[HUD_SPRITE_COUNT]*/
 	char* m_rgszSpriteNames;					  /*[HUD_SPRITE_COUNT][MAX_SPRITE_NAME_LENGTH]*/
 
+public:
 	struct cvar_s* default_fov;
 
 public:
@@ -600,6 +601,7 @@ public:
 	bool MsgFunc_SetFOV(const char* pszName, int iSize, void* pbuf);
 	bool MsgFunc_Concuss(const char* pszName, int iSize, void* pbuf);
 	bool MsgFunc_Weapons(const char* pszName, int iSize, void* pbuf);
+	bool MsgFunc_SetWpnAnim(const char* pszName, int iSize, void* pbuf);
 
 	bool MsgFunc_SetBody(const char* pszName, int iSize, void* pbuf);
 

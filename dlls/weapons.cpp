@@ -462,7 +462,7 @@ void CBasePlayerItem::Materialize()
 	pev->solid = SOLID_TRIGGER;
 
 	UTIL_SetOrigin(pev, pev->origin); // link into world.
-	SetTouch(&CBasePlayerItem::DefaultTouch);
+	//SetTouch(&CBasePlayerItem::DefaultTouch);
 	SetThink(NULL);
 }
 
@@ -711,9 +711,9 @@ void CBasePlayerWeapon::SendWeaponAnim(int iAnim, int body)
 		return;
 #endif
 
-	MESSAGE_BEGIN(MSG_ONE, SVC_WEAPONANIM, NULL, m_pPlayer->pev);
-	WRITE_BYTE(iAnim);	   // sequence number
-	WRITE_BYTE(pev->body); // weaponmodel bodygroup.
+	MESSAGE_BEGIN(MSG_ONE, gmsgSetWpnAnim, NULL, m_pPlayer->pev);
+	WRITE_SHORT(iAnim);	   // sequence number
+	WRITE_SHORT(pev->body); // weaponmodel bodygroup.
 	MESSAGE_END();
 }
 

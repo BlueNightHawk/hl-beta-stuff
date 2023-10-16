@@ -393,6 +393,14 @@ void DLLEXPORT HUD_TempEntUpdate(
 	if (g_pParticleMan)
 		g_pParticleMan->SetVariables(cl_gravity, vAngles);
 
+	extern cvar_s* r_shadows;
+
+	if ((int)gHUD.default_fov->value > 90 && !r_shadows)
+	{
+		if (!CL_IsThirdPerson())	
+			Callback_AddVisibleEntity(gEngfuncs.GetViewModel());
+	}
+
 	// Nothing to simulate
 	if (!*ppTempEntActive)
 		return;

@@ -66,4 +66,6 @@ void LinkUserMessages()
 
 	gmsgWeapons = REG_USER_MSG("Weapons", 8);
 	gmsgSetBody = REG_USER_MSG("SetBody", 2);
+
+	gmsgSetWpnAnim = REG_USER_MSG("SetWpnAnim", 4);
 }

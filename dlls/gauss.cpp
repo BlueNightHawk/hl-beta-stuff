@@ -566,7 +566,6 @@ void CGauss::WeaponIdle()
 			m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 3;
 		}
 
-		return;
 		SendWeaponAnim(iAnim);
 	}
 }

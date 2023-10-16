@@ -508,6 +508,8 @@ public:
 
 	void PrimaryAttack() override;
 	void SecondaryAttack() override;
+
+	void AddSilencer();
 	void GlockFire(float flSpread, float flCycleTime, bool fUseAutoAim);
 	bool Deploy() override;
 	void Reload() override;
@@ -739,6 +741,7 @@ public:
 	void PrimaryAttack() override;
 	void SecondaryAttack() override;
 	bool Deploy() override;
+	void Holster() override;
 	void Reload() override;
 	void WeaponIdle() override;
 	void ItemPostFrame() override;
@@ -935,7 +938,8 @@ enum egon_e
 enum EGON_FIRESTATE
 {
 	FIRE_OFF,
-	FIRE_CHARGE
+	FIRE_CHARGE,
+	FIRE_PREPARE
 };
 
 enum EGON_FIREMODE
@@ -976,10 +980,20 @@ public:
 	void EndAttack();
 	void Attack();
 	void PrimaryAttack() override;
+	void SecondaryAttack() override;
 	bool ShouldWeaponIdle() override { return true; }
 	void WeaponIdle() override;
 
 	float m_flAmmoUseTime; // since we use < 1 point of ammo per update, we subtract ammo on a timer.
+
+	float m_flAnimTime;
+
+	void DecrementTimers() override
+	{
+		m_flAnimTime -= gpGlobals->frametime;
+		if (m_flAnimTime < 0.0f)
+			m_flAnimTime = 0.0f;
+	}
 
 	float GetPulseInterval();
 	float GetDischargeInterval();
@@ -1184,6 +1198,27 @@ public:
 	bool Deploy() override;
 	void Holster() override;
 	void WeaponIdle() override;
+	void ItemPostFrame() override;
+	void Place();
+
+	void DecrementTimers() override
+	{
+		m_flAnimTime -= gpGlobals->frametime;
+		if (m_flAnimTime < 0.0f)
+			m_flAnimTime = 0.0f;
+	}
+
+	float m_flAnimTime;
+	bool m_bReDeploy;
+
+	float TimeBase()
+	{
+	#ifdef CLIENT_WEAPONS
+		return UTIL_WeaponTimeBase() + 0.1f;
+	#else
+		return 0.0f;
+	#endif
+	}
 
 	bool UseDecrement() override
 	{

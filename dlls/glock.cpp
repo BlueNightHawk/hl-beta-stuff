@@ -22,6 +22,8 @@
 
 #include "UserMessages.h"
 
+extern bool CanAttack(float attack_time, float curtime, bool isPredicted);
+
 LINK_ENTITY_TO_CLASS(weapon_glock, CGlock);
 LINK_ENTITY_TO_CLASS(weapon_9mmhandgun, CGlock);
 LINK_ENTITY_TO_CLASS_SPECIAL(weapon_silencer, CGlock, CGlock_SpawnSilenced);
@@ -63,14 +65,13 @@ void CGlock::DefaultTouch(CBaseEntity* pOther)
 		pPlayer->SetWeaponBit(WEAPON_GLOCK_SILENCER);
 		m_bSilencer = true;
 	
-#ifndef CLIENT_DLL
 		if (pPlayer->HasWeaponBit(WEAPON_GLOCK))
 		{
-			MESSAGE_BEGIN(MSG_ONE, gmsgWeapPickup, NULL, pOther->pev);
+			MESSAGE_BEGIN(MSG_ONE, gmsgWeapPickup, NULL, pPlayer->pev);
 			WRITE_BYTE(WEAPON_GLOCK);
 			MESSAGE_END();
 		}
-#endif
+
 		EMIT_SOUND(ENT(pPlayer->pev), CHAN_ITEM, "items/gunpickup2.wav", 1, ATTN_NORM);
 	}
 
@@ -105,7 +106,7 @@ bool CGlock::GetItemInfo(ItemInfo* p)
 	p->iMaxAmmo1 = _9MM_MAX_CARRY;
 	p->pszAmmo2 = NULL;
 	p->iMaxAmmo2 = -1;
-	p->iMaxClip = GLOCK_MAX_CLIP;
+	p->iMaxClip = GLOCK_MAX_CLIP + 1;
 	p->iSlot = 1;
 	p->iPosition = 0;
 	p->iFlags = 0;
@@ -126,10 +127,8 @@ bool CGlock::Deploy()
 	return DefaultDeploy("models/v_9mmhandgun.mdl", "models/p_9mmhandgun.mdl", GLOCK_DRAW, "onehanded", pev->body);
 }
 
-void CGlock::SecondaryAttack()
+void CGlock::AddSilencer()
 {
-//	GlockFire(0.1, 0.2, false);
-
 	if (!m_pPlayer->HasWeaponBit(WEAPON_GLOCK_SILENCER))
 		return;
 
@@ -151,6 +150,11 @@ void CGlock::SecondaryAttack()
 	m_iSilencerState = 1;
 }
 
+void CGlock::SecondaryAttack()
+{
+	GlockFire(0.1, 0.2, false);
+}
+
 void CGlock::PrimaryAttack()
 {
 	GlockFire(0.01, 0.3, true);
@@ -170,8 +174,6 @@ void CGlock::GlockFire(float flSpread, float flCycleTime, bool fUseAutoAim)
 	}
 
 	m_iClip--;
-
-	m_pPlayer->pev->effects = (int)(m_pPlayer->pev->effects) | EF_MUZZLEFLASH;
 
 	int flags;
 
@@ -195,6 +197,9 @@ void CGlock::GlockFire(float flSpread, float flCycleTime, bool fUseAutoAim)
 		// non-silenced
 		m_pPlayer->m_iWeaponVolume = NORMAL_GUN_VOLUME;
 		m_pPlayer->m_iWeaponFlash = NORMAL_GUN_FLASH;
+
+
+		m_pPlayer->pev->effects = (int)(m_pPlayer->pev->effects) | EF_MUZZLEFLASH;
 	}
 
 	Vector vecSrc = m_pPlayer->GetGunPosition();
@@ -232,9 +237,9 @@ void CGlock::Reload()
 	bool iResult;
 
 	if (m_iClip == 0)
-		iResult = DefaultReload(17, GLOCK_RELOAD, 1.5);
+		iResult = DefaultReload(iMaxClip(), GLOCK_RELOAD, 1.5);
 	else
-		iResult = DefaultReload(17, GLOCK_RELOAD_NOT_EMPTY, 1.5);
+		iResult = DefaultReload(iMaxClip(), GLOCK_RELOAD_NOT_EMPTY, 1.5);
 
 	if (iResult)
 	{
@@ -245,7 +250,27 @@ void CGlock::Reload()
 
 void CGlock::ItemPostFrame()
 {
-	if (m_iSilencerState != 0)
+	// 17 + 1 reload
+	if ((m_fInReload) && (m_pPlayer->m_flNextAttack <= UTIL_WeaponTimeBase()))
+	{
+		int iMax = iMaxClip();
+
+		if (m_iClip == 0)
+			--iMax;
+
+		// complete the reload.
+		int j = V_min(iMax - m_iClip, m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType]);
+
+		// Add them to the clip
+		m_iClip += j;
+		m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] -= j;
+
+		m_pPlayer->TabulateAmmo();
+
+		m_fInReload = false;
+	}
+
+	if (m_iSilencerState != 0 && m_iSilencerState != 5)
 	{
 		if (!m_bSilencer)
 		{
@@ -273,8 +298,20 @@ void CGlock::ItemPostFrame()
 			}
 		}
 	}
-	
-	CBasePlayerWeapon::ItemPostFrame();
+
+	if ((m_pPlayer->pev->button & IN_ATTACK) == 0)
+	{
+		m_flLastFireTime = 0.0f;
+	}
+
+	if ((m_pPlayer->pev->button & IN_ALT1) != 0 && CanAttack(m_flNextSecondaryAttack, gpGlobals->time, UseDecrement()))
+	{
+		m_pPlayer->TabulateAmmo();
+		AddSilencer();
+		m_pPlayer->pev->button &= ~IN_ALT1;
+	}
+	else
+		CBasePlayerWeapon::ItemPostFrame();
 }
 
 void CGlock::Holster()
@@ -282,6 +319,9 @@ void CGlock::Holster()
 	m_fInReload = false; // cancel any reload in progress.
 
 	m_iSilencerState = 0;
+
+	SendWeaponAnim(GLOCK_HOLSTER);
+	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.98f;
 }
 
 
